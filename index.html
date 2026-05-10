@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Storm Chaser Multiview</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Share+Tech+Mono&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#080b10;--surface:#0d1117;--surface2:#111822;--border:#1a2030;--border2:#243040;--accent:#00d4ff;--accent2:#ff6b35;--live:#ff3b3b;--text:#c8d4e8;--text2:#6a7a90;--text3:#3a4a60;--green:#00e676;--yellow:#ffd740}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex;flex-direction:column}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,212,255,.01) 2px,rgba(0,212,255,.01) 4px);pointer-events:none;z-index:9999}
+
+/* HEADER */
+#header{background:var(--surface);border-bottom:1px solid var(--border);padding:7px 12px;display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap}
+#logo{font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:700;color:var(--accent);letter-spacing:1px;text-transform:uppercase;white-space:nowrap}
+#logo span{color:var(--accent2)}
+.pulse-dot{width:7px;height:7px;border-radius:50%;background:var(--live);animation:blink 1.4s infinite;flex-shrink:0}
+@keyframes blink{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(255,59,59,.5)}50%{opacity:.5;box-shadow:0 0 0 5px rgba(255,59,59,0)}}
+#api-wrap{display:flex;align-items:center;gap:6px;margin-left:auto;flex-wrap:wrap}
+#api-input{background:var(--bg);border:1px solid var(--border2);color:var(--text);font-family:'Share Tech Mono',monospace;font-size:11px;padding:4px 8px;border-radius:4px;width:190px}
+#api-input:focus{outline:none;border-color:var(--accent)}
+#api-input::placeholder{color:var(--text3)}
+.hbtn{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;background:transparent;border:1px solid var(--border2);color:var(--text2);padding:4px 10px;border-radius:4px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.hbtn:hover,.hbtn.active{border-color:var(--accent);color:var(--accent)}
+#api-status{font-family:'Share Tech Mono',monospace;font-size:10px;padding:3px 7px;border-radius:3px;white-space:nowrap}
+.api-ok{background:rgba(0,230,118,.1);color:var(--green);border:1px solid rgba(0,230,118,.25)}
+.api-no{background:rgba(255,215,64,.1);color:var(--yellow);border:1px solid rgba(255,215,64,.25)}
+
+/* TOOLBAR */
+#toolbar{background:var(--surface);border-bottom:1px solid var(--border);padding:5px 12px;display:flex;align-items:center;gap:5px;flex-shrink:0;flex-wrap:wrap}
+#toolbar label{font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px}
+.lbtn{font-family:'Share Tech Mono',monospace;font-size:11px;background:var(--bg);border:1px solid var(--border);color:var(--text2);padding:3px 9px;border-radius:3px;cursor:pointer;transition:all .15s}
+.lbtn:hover{border-color:var(--accent);color:var(--accent)}
+.lbtn.active{background:rgba(0,212,255,.1);border-color:var(--accent);color:var(--accent)}
+#summary{margin-left:auto;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text2)}
+#summary strong{color:var(--live)}
+
+/* MAIN */
+#main{flex:1;display:flex;overflow:hidden;min-height:0}
+
+/* SIDEBAR */
+#sidebar{width:250px;min-width:250px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+#sb-top{padding:7px 9px 5px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px}
+#sb-top h2{font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text2);flex:1}
+#rbtn{font-size:10px;background:transparent;border:1px solid var(--border2);color:var(--text3);padding:2px 7px;border-radius:3px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-weight:700;text-transform:uppercase;transition:all .15s}
+#rbtn:hover{border-color:var(--accent);color:var(--accent)}
+#swrap{padding:5px 8px;border-bottom:1px solid var(--border)}
+#search{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);font-size:11px;padding:4px 7px;border-radius:3px}
+#search:focus{outline:none;border-color:var(--accent)}
+#search::placeholder{color:var(--text3)}
+#ftabs{display:flex;padding:4px 8px;gap:3px;border-bottom:1px solid var(--border)}
+.ftab{font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;background:transparent;border:1px solid var(--border);color:var(--text3);padding:2px 7px;border-radius:3px;cursor:pointer;transition:all .15s}
+.ftab:hover{color:var(--text2);border-color:var(--border2)}
+.ftab.active{background:rgba(0,212,255,.08);border-color:var(--accent);color:var(--accent)}
+#clist{flex:1;overflow-y:auto;padding:4px}
+#clist::-webkit-scrollbar{width:3px}
+#clist::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.glabel{font-family:'Rajdhani',sans-serif;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);padding:6px 5px 3px}
+.ccard{display:flex;align-items:center;gap:7px;padding:5px 7px;border-radius:4px;cursor:pointer;border:1px solid transparent;margin-bottom:2px;transition:all .12s}
+.ccard:hover{background:var(--surface2);border-color:var(--border)}
+.ccard.in-grid{background:rgba(0,212,255,.05);border-color:rgba(0,212,255,.2)}
+.av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;flex-shrink:0;border:2px solid transparent}
+.ci{flex:1;min-width:0}
+.cn{font-size:12px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cs{font-size:10px;color:var(--text3);font-family:'Share Tech Mono',monospace}
+.badge{font-family:'Share Tech Mono',monospace;font-size:9px;padding:2px 5px;border-radius:2px;white-space:nowrap;flex-shrink:0;display:flex;align-items:center;gap:3px}
+.b-live{background:rgba(255,59,59,.15);color:var(--live);border:1px solid rgba(255,59,59,.3)}
+.b-live::before{content:'';width:4px;height:4px;border-radius:50%;background:var(--live);animation:blink 1.2s infinite;display:inline-block}
+.b-off{background:rgba(40,48,64,.4);color:var(--text3);border:1px solid var(--border)}
+.b-chk{background:rgba(255,215,64,.1);color:var(--yellow);border:1px solid rgba(255,215,64,.2)}
+.b-unk{background:rgba(40,48,64,.3);color:var(--text3);border:1px solid var(--border)}
+
+/* GRID AREA */
+#gwrap{flex:1;padding:6px;overflow:auto;display:flex;flex-direction:column}
+#grid{flex:1;display:grid;gap:5px;min-height:0}
+.g-1x1{grid-template-columns:1fr;grid-template-rows:1fr}
+.g-1x2{grid-template-columns:1fr 1fr;grid-template-rows:1fr}
+.g-2x2{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
+.g-2x3{grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr}
+.g-3x3{grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr 1fr}
+.g-main{grid-template-columns:2fr 1fr;grid-template-rows:1fr 1fr}
+.gcell{background:var(--surface);border:1px solid var(--border);border-radius:5px;overflow:hidden;display:flex;flex-direction:column;min-height:100px;transition:border-color .15s}
+.gcell:hover{border-color:var(--border2)}
+.gcell.focused{border-color:var(--accent);box-shadow:0 0 0 1px rgba(0,212,255,.15)}
+.gcell.dragover{border-color:var(--accent);background:rgba(0,212,255,.04)}
+.gcell.maincell{grid-row:1/3}
+.cbar{background:rgba(8,11,16,.92);border-bottom:1px solid var(--border);padding:4px 7px;display:flex;align-items:center;gap:5px;flex-shrink:0}
+.cdot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.cname{font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-transform:uppercase;letter-spacing:.4px}
+.clive{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--live)}
+.coffline{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text3)}
+.closebtn{background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:0 2px;line-height:1;transition:color .15s}
+.closebtn:hover{color:var(--live)}
+.cbody{flex:1;position:relative;overflow:hidden}
+.cbody iframe{width:100%;height:100%;border:none;display:block}
+.cempty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;height:100%;color:var(--text3)}
+.cempty svg{opacity:.2}
+.cempty p{font-size:10px;font-family:'Share Tech Mono',monospace}
+
+/* BOTTOM */
+#bottom{background:var(--surface);border-top:1px solid var(--border);padding:4px 12px;display:flex;align-items:center;gap:8px;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text3);flex-shrink:0;flex-wrap:wrap}
+#clock{color:var(--accent)}
+.sep{color:var(--border2)}
+
+/* FULLSCREEN OVERLAY (mobile stream view) */
+#fs-overlay{display:none;position:fixed;inset:0;background:var(--bg);z-index:500;flex-direction:column}
+#fs-overlay.open{display:flex}
+#fs-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:8px 12px;display:flex;align-items:center;gap:8px;flex-shrink:0}
+#fs-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+#fs-title{font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;flex:1}
+#fs-status{font-family:'Share Tech Mono',monospace;font-size:10px}
+#fs-close{background:transparent;border:1px solid var(--border2);color:var(--text2);font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;padding:4px 12px;border-radius:4px;cursor:pointer;text-transform:uppercase;letter-spacing:.5px}
+#fs-close:hover{border-color:var(--live);color:var(--live)}
+#fs-body{flex:1;position:relative}
+#fs-body iframe{width:100%;height:100%;border:none;display:block}
+
+/* ═══════════════════════════════
+   MOBILE RESPONSIVE
+═══════════════════════════════ */
+@media(max-width:700px){
+  #api-wrap{display:none}
+  #toolbar{gap:4px;padding:4px 8px}
+  #toolbar label{display:none}
+  .lbtn{font-size:10px;padding:3px 7px}
+  #sidebar{display:none}
+  #main{flex-direction:column}
+  #gwrap{padding:4px}
+  #grid{gap:4px}
+  /* On mobile default to 1x2 (2 cells side by side) */
+  #grid{grid-template-columns:1fr 1fr;grid-template-rows:auto}
+  .gcell{min-height:180px}
+  .gcell.maincell{grid-row:auto}
+  /* Mobile: show a floating chaser button */
+  #mob-btn{display:flex}
+  #bottom .sep,#bottom span:not(#clock){display:none}
+  #bottom{justify-content:space-between}
+}
+@media(min-width:701px){
+  #mob-btn{display:none}
+  #mob-panel{display:none !important}
+}
+
+/* Mobile chaser panel */
+#mob-btn{display:none;position:fixed;bottom:54px;right:12px;z-index:300;background:var(--accent);color:var(--bg);font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border:none;padding:10px 16px;border-radius:24px;cursor:pointer;box-shadow:0 4px 20px rgba(0,212,255,.4)}
+#mob-panel{display:none;position:fixed;inset:0;z-index:400;flex-direction:column;background:var(--bg)}
+#mob-panel.open{display:flex}
+#mob-panel-header{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 14px;display:flex;align-items:center;gap:8px}
+#mob-panel-header h2{font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);flex:1}
+#mob-close{background:transparent;border:1px solid var(--border2);color:var(--text2);font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;padding:4px 12px;border-radius:4px;cursor:pointer;text-transform:uppercase}
+#mob-search{padding:8px 12px;border-bottom:1px solid var(--border)}
+#mob-search input{width:100%;background:var(--surface);border:1px solid var(--border2);color:var(--text);font-size:14px;padding:8px 10px;border-radius:6px}
+#mob-search input::placeholder{color:var(--text3)}
+#mob-search input:focus{outline:none;border-color:var(--accent)}
+#mob-ftabs{display:flex;padding:6px 12px;gap:6px;border-bottom:1px solid var(--border)}
+.mftab{font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;background:transparent;border:1px solid var(--border);color:var(--text3);padding:4px 12px;border-radius:4px;cursor:pointer;flex:1;text-align:center}
+.mftab.active{background:rgba(0,212,255,.1);border-color:var(--accent);color:var(--accent)}
+#mob-list{flex:1;overflow-y:auto;padding:6px 10px}
+.mob-glabel{font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);padding:10px 4px 5px}
+.mob-ccard{display:flex;align-items:center;gap:10px;padding:10px 10px;border-radius:8px;cursor:pointer;border:1px solid transparent;margin-bottom:4px;transition:all .12s;background:var(--surface)}
+.mob-ccard:hover,.mob-ccard:active{background:var(--surface2);border-color:var(--border2)}
+.mob-ccard.in-grid{border-color:rgba(0,212,255,.3);background:rgba(0,212,255,.05)}
+.mob-av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;flex-shrink:0;border:2px solid transparent}
+.mob-ci{flex:1;min-width:0}
+.mob-cn{font-size:14px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mob-cs{font-size:11px;color:var(--text3);font-family:'Share Tech Mono',monospace;margin-top:2px}
+.mob-badge{font-family:'Share Tech Mono',monospace;font-size:10px;padding:3px 7px;border-radius:3px;white-space:nowrap;flex-shrink:0;display:flex;align-items:center;gap:4px}
+.mb-live{background:rgba(255,59,59,.15);color:var(--live);border:1px solid rgba(255,59,59,.3)}
+.mb-live::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--live);animation:blink 1.2s infinite;display:inline-block}
+.mb-off{background:rgba(40,48,64,.4);color:var(--text3);border:1px solid var(--border)}
+.mb-unk{background:rgba(40,48,64,.3);color:var(--text3);border:1px solid var(--border)}
+
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div class="pulse-dot"></div>
+  <div id="logo">Storm<span>Chase</span> · Multiview</div>
+  <div id="api-wrap">
+    <input id="api-input" type="password" placeholder="Paste YouTube API key...">
+    <button class="hbtn" onclick="saveKey()">Connect</button>
+    <span id="api-status" class="api-no">No API Key</span>
+  </div>
+</div>
+
+<div id="toolbar">
+  <label>Layout:</label>
+  <button class="lbtn active" onclick="setLayout('2x2',this)">2×2</button>
+  <button class="lbtn" onclick="setLayout('1x2',this)">1×2</button>
+  <button class="lbtn" onclick="setLayout('2x3',this)">2×3</button>
+  <button class="lbtn" onclick="setLayout('3x3',this)">3×3</button>
+  <button class="lbtn" onclick="setLayout('main',this)">Main+Side</button>
+  <button class="lbtn" onclick="setLayout('1x1',this)">Full</button>
+  <div style="display:flex;gap:5px;margin-left:6px">
+    <button class="hbtn" onclick="clearGrid()">Clear</button>
+    <button class="hbtn" onclick="addCustom()">+ Custom</button>
+  </div>
+  <div id="summary" style="margin-left:auto"><strong id="lcount">0</strong> live &nbsp;·&nbsp; <span id="gcount">0</span> in grid</div>
+</div>
+
+<div id="main">
+  <!-- DESKTOP SIDEBAR -->
+  <div id="sidebar">
+    <div id="sb-top">
+      <h2>Chasers (<span id="total">0</span>)</h2>
+      <button id="rbtn" onclick="checkAll()">↻ Refresh</button>
+    </div>
+    <div id="swrap"><input id="search" type="text" placeholder="Search..." oninput="renderList()"></div>
+    <div id="ftabs">
+      <button class="ftab active" onclick="setFilter('all',this)">All</button>
+      <button class="ftab" onclick="setFilter('live',this)">Live</button>
+      <button class="ftab" onclick="setFilter('avail',this)">Available</button>
+    </div>
+    <div id="clist"></div>
+  </div>
+
+  <!-- GRID -->
+  <div id="gwrap">
+    <div id="grid" class="g-2x2"></div>
+  </div>
+</div>
+
+<div id="bottom">
+  <span id="clock"></span>
+  <span class="sep">|</span>
+  <span>Click chaser to add · Drag to cell · Click cell to focus</span>
+  <span class="sep">|</span>
+  <span>API key enables live detection</span>
+</div>
+
+<!-- MOBILE CHASER BUTTON -->
+<button id="mob-btn" onclick="openMobPanel()">☰ Chasers</button>
+
+<!-- MOBILE CHASER PANEL -->
+<div id="mob-panel">
+  <div id="mob-panel-header">
+    <h2>Chasers (<span id="mob-total">0</span>)</h2>
+    <button id="mob-close" onclick="closeMobPanel()">✕ Close</button>
+  </div>
+  <div id="mob-search"><input type="text" placeholder="Search chasers..." oninput="renderMobList(this.value)"></div>
+  <div id="mob-ftabs">
+    <button class="mftab active" onclick="setMobFilter('all',this)">All</button>
+    <button class="mftab" onclick="setMobFilter('live',this)">Live</button>
+    <button class="mftab" onclick="setMobFilter('avail',this)">Available</button>
+  </div>
+  <div id="mob-list"></div>
+</div>
+
+<!-- FULLSCREEN STREAM OVERLAY -->
+<div id="fs-overlay">
+  <div id="fs-bar">
+    <div id="fs-dot"></div>
+    <div id="fs-title"></div>
+    <div id="fs-status"></div>
+    <button id="fs-close" onclick="closeFs()">✕ Close</button>
+  </div>
+  <div id="fs-body">
+    <iframe id="fs-iframe" allow="autoplay;encrypted-media;picture-in-picture" allowfullscreen></iframe>
+  </div>
+</div>
+
+<script>
+const CHASERS = [
+  // WEATHERWISE
+  {id:'brad',    name:'Brad Arnold',          group:'WeatherWise',     channelId:'UCj6aoh3tZuQoqfHs4ZWpHcA', color:'#2196f3', i:'BA'},
+  {id:'bcopic',  name:'Brandon Copic',        group:'WeatherWise',     channelId:'UCY7OHR_yAApkxCX4TWHK8vw', color:'#42a5f5', i:'BC'},
+  {id:'corey',   name:'Corey Gerken',         group:'WeatherWise',     channelId:'UCRk5AoNs_1cg_fYTWU_SUKA', color:'#64b5f6', i:'CG'},
+  {id:'adam',    name:'Adam Lucio',           group:'WeatherWise',     channelId:'UCf8dNCufHlKZp-CgU8NPryw', color:'#1565c0', i:'AL'},
+  {id:'jaden',   name:'Jaden Pappenheim',     group:'WeatherWise',     channelId:'UC6lUxl1KxmI7TWnAA6go1EQ', color:'#1a237e', i:'JP'},
+  {id:'bmont',   name:'Brandon Montgomery',   group:'WeatherWise',     channelId:'UCuW2RFJMnJFJiYNwNnEbdVg', color:'#283593', i:'BM'},
+  // RYAN HALL Y'ALL
+  {id:'ryanhall',name:"Ryan Hall Y'all",      group:"Ryan Hall Y'all", channelId:'UCJHAT3Uvv-g3I8H3GhHWV7w', color:'#ff6b35', i:'RH'},
+  {id:'yallbot', name:"Ya'llBot (24/7 AI)",   group:"Ryan Hall Y'all", channelId:'UCBBsPuUY-8UwkSim4zLXp1w', color:'#ff9800', i:'YB'},
+  // MAX VELOCITY
+  {id:'max',     name:'Max Velocity',         group:'Max Velocity',    channelId:'UCvBVK2ymNzPLRJrgip2GeQQ', color:'#00d4ff', i:'MV'},
+  {id:'connor',  name:'Connor Croff',         group:'Max Velocity',    channelId:'UCBjuGrMIjVcTEo9u0rBrgBg', color:'#00bcd4', i:'CC'},
+  {id:'cj',      name:'CJ Ziegler',           group:'Max Velocity',    channelId:'UCQbMHPHvFGMSMHCBXBJbAdQ', color:'#00acc1', i:'CZ'},
+  {id:'rscholl', name:'Ryan Scholl',          group:'Max Velocity',    channelId:'UCeN9-lmbKvxJBQfGUmw2UOQ', color:'#0097a7', i:'RS'},
+  {id:'srm',     name:'StormRunner Media',    group:'Max Velocity',    channelId:'UCxAn4gJ_rASCHKmq4_qRFfg', color:'#00838f', i:'SR'},
+  {id:'jakob',   name:'Jakob McMillin',       group:'Max Velocity',    channelId:'UCE1HYHMcRAfOC1eLKzBcBnA', color:'#006064', i:'JM'},
+  {id:'edgar',   name:"Edgar O'Neal",         group:'Max Velocity',    channelId:'UCwN8Z_wIvyWpJsRFGCdKkKw', color:'#00796b', i:'EO'},
+  {id:'nick',    name:'Nick Gorman',          group:'Max Velocity',    channelId:'UCYjz3JmGMkGBdBbVQQvkCNg', color:'#00897b', i:'NG'},
+  {id:'bryce',   name:'Bryce & Paige',        group:'Max Velocity',    channelId:'UCp4PTNV3KGFb2vRm9nM5sRA', color:'#00695c', i:'BP'},
+  {id:'trx',     name:'TornadoTRX',           group:'Max Velocity',    channelId:'UCnqRFXxJSWcEHnKtSHdnAEQ', color:'#558b2f', i:'TX'},
+  {id:'johnmck', name:'John McKinney',        group:'Max Velocity',    channelId:'UCWMRFAo3Cvd7W8yQpQwsOQA', color:'#33691e', i:'JK'},
+  // INDEPENDENTS
+  {id:'reed',    name:'Reed Timmer',          group:'Independents',    channelId:'UCV6hWxB0-YXvuE5VkFSoJbQ', color:'#e53935', i:'RT'},
+  {id:'freddy',  name:'Freddy McKinney',      group:'Independents',    channelId:'UCZSDkxJS7PRw9V0_Sm6U7jg', color:'#8e24aa', i:'FM'},
+  {id:'pecos',   name:'Pecos Hank',           group:'Independents',    channelId:'UCAQpSHsgUcNt6uCOjpgD8kw', color:'#f4511e', i:'PH'},
+  {id:'texas',   name:'Texas Storm Chasers',  group:'Independents',    channelId:'UCNPvoDpoOWevcdTHr8GyTyA', color:'#c0392b', i:'TS'},
+  {id:'lsm',     name:'Live Storms Media',    group:'Independents',    channelId:'UC1nJElGcV3MmsMBTlPv7K3g', color:'#d84315', i:'LS'},
+  {id:'brett',   name:'Brett Adair',          group:'Independents',    channelId:'UCTgHmBdjiKZtkGpM3urHX7g', color:'#bf360c', i:'BA'},
+  {id:'vince',   name:'Vince Waelti',         group:'Independents',    channelId:'UCqSk-ojoH2rgAuYadPLJgJA', color:'#e65100', i:'VW'},
+  {id:'tyler',   name:'Tyler Kurtz',          group:'Independents',    channelId:'UCRCXo0mDpBOZ6-qB5fqHQKA', color:'#ff8f00', i:'TK'},
+  {id:'aaron',   name:'Aaron Jayjack',        group:'Independents',    channelId:'UC8QZ-OIqfWKek1CpMvs2O3g', color:'#f9a825', i:'AJ'},
+  {id:'skip',    name:'Skip Talbot',          group:'Independents',    channelId:'UCkB7RBehEqHvsD60C1yfAAg', color:'#9e9e9e', i:'ST'},
+  {id:'base',    name:'Basehunters',          group:'Independents',    channelId:'UCqAWcfd0BJBgCW8iyOLOF3g', color:'#78909c', i:'BH'},
+  {id:'ttitans', name:'Tornado Titans',       group:'Independents',    channelId:'UCbXMvSMDj80RrCjj4iuQ08A', color:'#7b1fa2', i:'TT'},
+  {id:'trdpro',  name:'TRD Pro Chasers',      group:'Independents',    channelId:'UCE5hG35cePuCb3MbxDlYRPQ', color:'#455a64', i:'TP'},
+  {id:'lsc',     name:'Live Storm Chasers',   group:'Independents',    channelId:'UCpLuZpjFlGSAb1fCDGpNOtg', color:'#546e7a', i:'LC'},
+  {id:'scvideo', name:'StormChasing Video',   group:'Independents',    channelId:'UCWAN-rRJFxEFJpQe6SEoGBg', color:'#607d8b', i:'SV'},
+  // STORMVIEW LIVE
+  {id:'barry',   name:'Barry Gray',           group:'StormView Live',  channelId:'UCdTK4m2GbHb7fkdJM57J6Ww', color:'#1e88e5', i:'BG'},
+  {id:'nathan',  name:'Nathan Moore',         group:'StormView Live',  channelId:'UCHEMvFnGqmUKXXgHbsLRPMg', color:'#1976d2', i:'NM'},
+  {id:'sctv',    name:'Storm Chase TV',       group:'StormView Live',  channelId:'UCPq5TG4bXSo0iHRRfvL-PCA', color:'#1565c0', i:'SC'},
+];
+
+let apiKey = localStorage.getItem('sc_apikey') || '';
+let liveStatus = {};
+let gridCells = [null,null,null,null];
+let layout = '2x2';
+let focused = null;
+let filterMode = 'all';
+let mobFilterMode = 'all';
+
+const LAYOUTS = {
+  '1x1':{count:1,cls:'g-1x1'},
+  '1x2':{count:2,cls:'g-1x2'},
+  '2x2':{count:4,cls:'g-2x2'},
+  '2x3':{count:6,cls:'g-2x3'},
+  '3x3':{count:9,cls:'g-3x3'},
+  'main':{count:3,cls:'g-main'},
+};
+
+function embedUrl(channelId){
+  return `https://www.youtube.com/embed/live_stream?channel=${channelId}&autoplay=1`;
+}
+
+// API KEY
+function saveKey(){
+  apiKey = document.getElementById('api-input').value.trim();
+  if(apiKey){
+    localStorage.setItem('sc_apikey', apiKey);
+    document.getElementById('api-status').textContent = 'API Connected';
+    document.getElementById('api-status').className = 'api-ok';
+    checkAll();
+  }
+}
+
+// LIVE CHECK
+async function checkAll(){
+  if(!apiKey){ CHASERS.forEach(c=>liveStatus[c.channelId]=null); renderList(); renderMobList(); return; }
+  CHASERS.forEach(c=>liveStatus[c.channelId]='checking');
+  renderList(); renderMobList();
+  await Promise.all(CHASERS.map(c=>checkOne(c.channelId)));
+  renderList(); renderMobList(); renderGrid(); updateCounts();
+}
+
+async function checkOne(cid){
+  if(!apiKey) return;
+  try{
+    const r = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${cid}&eventType=live&type=video&key=${apiKey}`);
+    const d = await r.json();
+    liveStatus[cid] = d.error ? false : (d.items && d.items.length > 0);
+  } catch { liveStatus[cid] = false; }
+}
+
+// LAYOUT
+function setLayout(l, btn){
+  layout = l;
+  document.querySelectorAll('.lbtn').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  const n = LAYOUTS[l].count;
+  while(gridCells.length < n) gridCells.push(null);
+  gridCells = gridCells.slice(0, n);
+  renderGrid();
+}
+
+// GRID RENDER
+function renderGrid(){
+  const g = document.getElementById('grid');
+  g.className = 'g-' + layout;
+  g.innerHTML = '';
+  gridCells.forEach((cid, idx) => {
+    const cell = document.createElement('div');
+    const isMain = layout==='main' && idx===0;
+    cell.className = 'gcell' + (focused===idx?' focused':'') + (isMain?' maincell':'');
+    cell.ondragover = e => { e.preventDefault(); cell.classList.add('dragover'); };
+    cell.ondragleave = () => cell.classList.remove('dragover');
+    cell.ondrop = e => {
+      e.preventDefault(); cell.classList.remove('dragover');
+      const id = e.dataTransfer.getData('cid');
+      if(id){ gridCells[idx]=id; renderGrid(); renderList(); updateCounts(); }
+    };
+    cell.onclick = () => { focused = focused===idx ? null : idx; renderGrid(); };
+    const ch = cid ? CHASERS.find(c=>c.id===cid) : null;
+    if(ch){
+      const live = liveStatus[ch.channelId];
+      cell.innerHTML = `<div class="cbar"><div class="cdot" style="background:${ch.color}"></div><span class="cname" style="color:${ch.color}">${ch.name}</span>${live===true?'<span class="clive">● LIVE</span>':'<span class="coffline">● offline</span>'}<button class="closebtn" onclick="event.stopPropagation();removeCell(${idx})">✕</button></div><div class="cbody"><iframe src="${embedUrl(ch.channelId)}" allow="autoplay;encrypted-media;picture-in-picture" allowfullscreen loading="lazy"></iframe></div>`;
+    } else {
+      cell.innerHTML = `<div class="cbar"><div class="cdot" style="background:var(--border2)"></div><span class="cname" style="color:var(--text3)">Slot ${idx+1}</span></div><div class="cbody"><div class="cempty"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg><p>click chaser to assign</p></div></div>`;
+    }
+    g.appendChild(cell);
+  });
+}
+
+function removeCell(idx){ gridCells[idx]=null; if(focused===idx)focused=null; renderGrid(); renderList(); updateCounts(); }
+function clearGrid(){ gridCells=gridCells.map(()=>null); focused=null; renderGrid(); renderList(); renderMobList(); updateCounts(); }
+
+function addToGrid(id){
+  let t = focused!==null && focused<gridCells.length ? focused : gridCells.indexOf(null);
+  if(t < 0) t = 0;
+  gridCells[t] = id; focused = null;
+  renderGrid(); renderList(); renderMobList(); updateCounts();
+}
+
+// DESKTOP LIST
+function setFilter(f, btn){
+  filterMode = f;
+  document.querySelectorAll('.ftab').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  renderList();
+}
+
+function badgeHtml(cid, desktop){
+  const st = liveStatus[cid];
+  if(desktop){
+    if(st==='checking') return `<span class="badge b-chk">...</span>`;
+    if(st===true)       return `<span class="badge b-live">LIVE</span>`;
+    if(st===false)      return `<span class="badge b-off">offline</span>`;
+    return `<span class="badge b-unk">—</span>`;
+  } else {
+    if(st===true)  return `<span class="mob-badge mb-live">LIVE</span>`;
+    if(st===false) return `<span class="mob-badge mb-off">offline</span>`;
+    return `<span class="mob-badge mb-unk">—</span>`;
+  }
+}
+
+function filteredChasers(q, mode){
+  return CHASERS.filter(c => {
+    if(q && !c.name.toLowerCase().includes(q.toLowerCase()) && !c.group.toLowerCase().includes(q.toLowerCase())) return false;
+    if(mode==='live' && liveStatus[c.channelId]!==true) return false;
+    if(mode==='avail' && gridCells.includes(c.id)) return false;
+    return true;
+  });
+}
+
+function groupBy(arr){
+  const g = {};
+  arr.forEach(c => { if(!g[c.group]) g[c.group]=[]; g[c.group].push(c); });
+  return g;
+}
+
+function renderList(){
+  const q = document.getElementById('search').value;
+  const list = document.getElementById('clist');
+  list.innerHTML = '';
+  const groups = groupBy(filteredChasers(q, filterMode));
+  Object.keys(groups).forEach(grp => {
+    const lbl = document.createElement('div');
+    lbl.className = 'glabel'; lbl.textContent = grp;
+    list.appendChild(lbl);
+    groups[grp].forEach(c => {
+      const inGrid = gridCells.includes(c.id);
+      const div = document.createElement('div');
+      div.className = 'ccard' + (inGrid?' in-grid':'');
+      div.draggable = true;
+      div.innerHTML = `<div class="av" style="background:${c.color}22;color:${c.color};border-color:${c.color}44">${c.i}</div><div class="ci"><div class="cn">${c.name}</div><div class="cs">${inGrid?'✓ in grid':'click to add'}</div></div>${badgeHtml(c.channelId,true)}`;
+      div.onclick = () => addToGrid(c.id);
+      div.ondragstart = e => e.dataTransfer.setData('cid', c.id);
+      list.appendChild(div);
+    });
+  });
+  if(!list.children.length) list.innerHTML = `<div style="padding:16px;text-align:center;color:var(--text3);font-size:11px;font-family:'Share Tech Mono',monospace">No chasers found</div>`;
+  document.getElementById('total').textContent = CHASERS.length;
+}
+
+// MOBILE LIST
+function setMobFilter(f, btn){
+  mobFilterMode = f;
+  document.querySelectorAll('.mftab').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  renderMobList();
+}
+
+function renderMobList(q=''){
+  const list = document.getElementById('mob-list');
+  list.innerHTML = '';
+  const groups = groupBy(filteredChasers(q, mobFilterMode));
+  Object.keys(groups).forEach(grp => {
+    const lbl = document.createElement('div');
+    lbl.className = 'mob-glabel'; lbl.textContent = grp;
+    list.appendChild(lbl);
+    groups[grp].forEach(c => {
+      const inGrid = gridCells.includes(c.id);
+      const div = document.createElement('div');
+      div.className = 'mob-ccard' + (inGrid?' in-grid':'');
+      div.innerHTML = `<div class="mob-av" style="background:${c.color}22;color:${c.color};border-color:${c.color}44">${c.i}</div><div class="mob-ci"><div class="mob-cn">${c.name}</div><div class="mob-cs">${c.group}${inGrid?' · ✓ in grid':''}</div></div>${badgeHtml(c.channelId,false)}`;
+      div.onclick = () => {
+        const isMobile = window.innerWidth <= 700;
+        if(isMobile){
+          closeMobPanel();
+          openFs(c);
+        } else {
+          addToGrid(c.id);
+          closeMobPanel();
+        }
+      };
+      list.appendChild(div);
+    });
+  });
+  if(!list.children.length) list.innerHTML = `<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px;font-family:'Share Tech Mono',monospace">No chasers found</div>`;
+  document.getElementById('mob-total').textContent = CHASERS.length;
+}
+
+// MOBILE PANEL
+function openMobPanel(){ document.getElementById('mob-panel').classList.add('open'); renderMobList(); }
+function closeMobPanel(){ document.getElementById('mob-panel').classList.remove('open'); }
+
+// FULLSCREEN STREAM
+function openFs(ch){
+  const ov = document.getElementById('fs-overlay');
+  const live = liveStatus[ch.channelId];
+  document.getElementById('fs-dot').style.background = ch.color;
+  document.getElementById('fs-title').textContent = ch.name;
+  document.getElementById('fs-title').style.color = ch.color;
+  document.getElementById('fs-status').innerHTML = live===true ? '<span style="color:var(--live);font-family:Share Tech Mono,monospace;font-size:10px">● LIVE</span>' : '<span style="color:var(--text3);font-family:Share Tech Mono,monospace;font-size:10px">● offline</span>';
+  document.getElementById('fs-iframe').src = embedUrl(ch.channelId);
+  ov.classList.add('open');
+}
+function closeFs(){
+  document.getElementById('fs-overlay').classList.remove('open');
+  document.getElementById('fs-iframe').src = '';
+}
+
+// COUNTS
+function updateCounts(){
+  document.getElementById('lcount').textContent = CHASERS.filter(c=>liveStatus[c.channelId]===true).length;
+  document.getElementById('gcount').textContent = gridCells.filter(Boolean).length;
+}
+
+// CUSTOM
+function addCustom(){
+  const url = prompt('YouTube channel URL or channel ID:');
+  if(!url) return;
+  const name = prompt('Display name:') || 'Custom';
+  const cid = url.match(/(UC[\w-]{22})/)?.[1] || url.split('/').filter(Boolean).pop();
+  const color = '#'+Math.floor(Math.random()*0xffffff).toString(16).padStart(6,'0');
+  const ch = {id:'custom-'+Date.now(), name, group:'Custom', channelId:cid, color, i:name.substring(0,2).toUpperCase()};
+  CHASERS.push(ch); liveStatus[cid] = null;
+  addToGrid(ch.id); renderList(); renderMobList();
+}
+
+// CLOCK
+function tick(){
+  const n = new Date();
+  document.getElementById('clock').textContent = n.toUTCString().replace(' GMT','').split(',')[1]?.trim() + ' UTC';
+}
+setInterval(tick, 1000); tick();
+
+// INIT
+if(apiKey){
+  document.getElementById('api-input').value = apiKey;
+  document.getElementById('api-status').textContent = 'API Connected';
+  document.getElementById('api-status').className = 'api-ok';
+}
+CHASERS.forEach(c => liveStatus[c.channelId] = null);
+renderGrid(); renderList(); renderMobList(); updateCounts();
+if(apiKey) setTimeout(checkAll, 500);
+</script>
+</body>
+</html>
